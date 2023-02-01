@@ -19,14 +19,23 @@ contract Dogs is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, VRFConsume
     bool public preMintWindow = false;
     bool public mintWindow = false;
 
-    // METADATA of NFT
+    // METADATA of NFT(3 for each)
     string constant METADATA_SHIBAINU = "ipfs://QmXw7TEAJWKjKifvLE25Z9yjvowWk2NWY3WgnZPUto9XoA";
     string constant METADATA_HUSKY = "ipfs://QmTFXZBmmnSANGRGhRVoahTTVPJyGaWum8D3YicJQmG97m";
     string constant METADATA_BULLDOG = "ipfs://QmSM5h4WseQWATNhFWeCbqCTAGJCZc11Sa1P5gaXk38ybT";
     string constant METADATA_SHEPHERD = "ipfs://QmRGryH7a1SLyTccZdnatjFpKeaydJcpvQKeQTzQgEp9eK";    
 
-    // config of chainlink VRF
+    string constant METADATA_SHIBAINU_cold = "ipfs://QmdjVTLhkLgyDapCdytbrLqhyn35wDqJetcWxj2C2BAFoZ";
+    string constant METADATA_HUSKY_cold = "ipfs://Qmc2gR3GK1wnv2eTQePQyRuQqYdZhD4AMv5Kqu9eJHrP9t";
+    string constant METADATA_BULLDOG_cold = "ipfs://QmZmHfmcNf3Q1C2x1Da1t2W4jh5PK78g7rJ6N55ontER6k";
+    string constant METADATA_SHEPHERD_cold = "ipfs://QmQZMbJGXe79Fjr81GVuwWE8innnFLtAdJ5fdrJoSpqJzT";
     
+    string constant METADATA_SHIBAINU_hot = "ipfs://QmUKfjGZHtGVrRBQ1GMpdHX2USV6SW6LjC4veCngTUamca";
+    string constant METADATA_HUSKY_hot = "ipfs://QmQ8auA5CfWEpEVxMBab8syZNgtWdeeRUq9Mjwt12PbujA";
+    string constant METADATA_BULLDOG_hot = "ipfs://QmSEmJhmAAJGmFAEhbimbawX5bjUqbCyrcu84xifQji9QR";
+    string constant METADATA_SHEPHERD_hot = "ipfs://QmWKBLL6yakCWsexbk4wTng7dfQo8UtDqY65bCdTfwex6D";    
+
+    // config of chainlink VRF
     VRFCoordinatorV2Interface COORDINATOR;
     uint64 s_subscriptionId;
     bytes32 keyHash =
@@ -35,6 +44,12 @@ contract Dogs is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, VRFConsume
     uint16 requestConfirmations = 3;
     uint32 numWords = 1;
     mapping(uint256 => uint256) reqIdToTokenId;
+
+    // for dynamic
+    int256 public currentTmp;
+    int256 public latestTmp;
+    mapping (uint256 => dogBreed) tokenIdToDogBreed;
+    enum dogBreed { SHIBAINU, HUSKY, BULLDOG, SHEPHERD }
 
     constructor(uint64 subId) ERC721("Dogs", "DGS") VRFConsumerBaseV2(0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D) {
         s_subscriptionId = subId;
@@ -61,6 +76,56 @@ contract Dogs is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, VRFConsume
         _tokenIdCounter.increment();
         _safeMint(msg.sender, tokenId);
         request(tokenId);
+    }
+
+    function updateLatestTmp(int256 temp) public  {
+        latestTmp = temp;
+    }
+
+    function updateMetadata() public {
+        if (latestTmp != currentTmp) {
+            //update metadata according to latest tmp
+            if(latestTmp < 10 * 10 ** 18) {
+                for(uint256 i = 0; i < totalSupply(); i++) {
+                    if(tokenIdToDogBreed[i] == dogBreed.BULLDOG) {
+                        _setTokenURI(i, METADATA_BULLDOG_cold);    
+                    } else if(tokenIdToDogBreed[i] == dogBreed.SHIBAINU) {
+                        _setTokenURI(i, METADATA_SHIBAINU_cold);    
+                    } else if(tokenIdToDogBreed[i] == dogBreed.HUSKY) {
+                        _setTokenURI(i, METADATA_HUSKY_cold);    
+                    } else {
+                        _setTokenURI(i, METADATA_SHEPHERD_cold);    
+                    }
+                }
+            } else if (latestTmp > 18 * 10 ** 18) {
+                //update metadata to hot metadata
+                for(uint256 i = 0; i < totalSupply(); i++) {
+                    if(tokenIdToDogBreed[i] == dogBreed.BULLDOG) {
+                        _setTokenURI(i, METADATA_BULLDOG_hot);    
+                    } else if(tokenIdToDogBreed[i] == dogBreed.SHIBAINU) {
+                        _setTokenURI(i, METADATA_SHIBAINU_hot);    
+                    } else if(tokenIdToDogBreed[i] == dogBreed.HUSKY) {
+                        _setTokenURI(i, METADATA_HUSKY_hot);    
+                    } else {
+                        _setTokenURI(i, METADATA_SHEPHERD_hot);    
+                    }
+                }
+            } else {
+                //udpate metadata to average
+                for(uint256 i = 0; i < totalSupply(); i++) {
+                    if(tokenIdToDogBreed[i] == dogBreed.BULLDOG) {
+                        _setTokenURI(i, METADATA_BULLDOG);    
+                    } else if(tokenIdToDogBreed[i] == dogBreed.SHIBAINU) {
+                        _setTokenURI(i, METADATA_SHIBAINU);    
+                    } else if(tokenIdToDogBreed[i] == dogBreed.HUSKY) {
+                        _setTokenURI(i, METADATA_HUSKY);    
+                    } else {
+                        _setTokenURI(i, METADATA_SHEPHERD);    
+                    }
+                }
+            }
+            currentTmp = latestTmp;
+        }
     }
 
     function withdraw(address addr) external onlyOwner {
@@ -90,12 +155,16 @@ contract Dogs is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, VRFConsume
         uint256 randomNumber = _randomWords[0] % 4;
         if (randomNumber == 0) {
             _setTokenURI(reqIdToTokenId[_requestId], METADATA_SHIBAINU);
+            tokenIdToDogBreed[reqIdToTokenId[_requestId]] = dogBreed.SHIBAINU;
         } else if (randomNumber == 1) {
             _setTokenURI(reqIdToTokenId[_requestId], METADATA_HUSKY);
+            tokenIdToDogBreed[reqIdToTokenId[_requestId]] = dogBreed.HUSKY;
         } else if (randomNumber == 2) {
             _setTokenURI(reqIdToTokenId[_requestId], METADATA_SHEPHERD);
+            tokenIdToDogBreed[reqIdToTokenId[_requestId]] = dogBreed.SHEPHERD;
         } else {
             _setTokenURI(reqIdToTokenId[_requestId], METADATA_BULLDOG);
+            tokenIdToDogBreed[reqIdToTokenId[_requestId]] = dogBreed.BULLDOG;
         }
     }
 
