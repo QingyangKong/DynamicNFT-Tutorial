@@ -21,7 +21,7 @@ contract Dogs is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
 
     function preMint() public payable {
         require(preMintWindow, "Premint is not open yet!");
-        require(msg.value == 0.001 ether, "The price of dog nft is 0.005 ether");
+        require(msg.value == 0.001 ether, "The price of dog nft is 0.001 ether");
         require(whiteList[msg.sender], "You are not in the white list");
         require(balanceOf(msg.sender) < 1, "Max amount of NFT minted by an addresss is 1");
         require(totalSupply() < MAX_AMOUNT, "Dog NFT is sold out!");
