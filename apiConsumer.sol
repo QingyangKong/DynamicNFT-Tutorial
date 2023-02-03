@@ -10,7 +10,7 @@ pragma solidity ^0.8.7;
 
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
-import "./ProfileNft.sol";
+import "./Dogs.sol";
 
 contract APIConsumer is ChainlinkClient, ConfirmedOwner {
     using Chainlink for Chainlink.Request;
@@ -85,8 +85,8 @@ contract APIConsumer is ChainlinkClient, ConfirmedOwner {
         bytes32 _requestId,
         int256 _temperature
     ) public recordChainlinkFulfillment(_requestId) {
-        mytoken.updateLastestTemperature(_temperature);
-        emit fulfillTemp(_requestId, _temperature);
+        temp = _temp;
+        dogs.updateLatestTmp(_temp);
     }
 
     /**
